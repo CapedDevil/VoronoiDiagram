@@ -11,6 +11,8 @@ public class DCEL {
     private final HashSet<Site> sites;
     private final HashMap<Beachline.Breakpoint, Edge> uncompletedEdges;
     private final HashMap<Beachline.Breakpoint, Beachline.Breakpoint> edgeTwins;
+    // A neat way of doing breakpoint twins
+    private Beachline.Breakpoint previousBreakpoint;
 
     // Constructor
     public DCEL() {
@@ -29,12 +31,15 @@ public class DCEL {
     }
 
     public void insert(Beachline.Breakpoint breakpoint) {
+        // If previousBreakpoint is null, then there is no twin edge, if it is not null, then twin the breakpoints
         Edge edge = new Edge();
+        if (previousBreakpoint == null)
+            previousBreakpoint = breakpoint;
+        else {
+            edgeTwins.put(previousBreakpoint, breakpoint);
+            edgeTwins.put(breakpoint, previousBreakpoint);
+            previousBreakpoint = null;
+        }
         uncompletedEdges.put(breakpoint, edge);
-    }
-
-    public void link(Beachline.Breakpoint breakpoint1, Beachline.Breakpoint breakpoint2) {
-        edgeTwins.put(breakpoint1, breakpoint2);
-        edgeTwins.put(breakpoint2, breakpoint1);
     }
 }

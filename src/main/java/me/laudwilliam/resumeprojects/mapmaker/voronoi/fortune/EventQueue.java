@@ -18,8 +18,22 @@ class EventQueue {
         size++;
         if (head == null)
             return head = node;
+        if (head.event.compareTo(event) < 0) {
+            Node oldHead = head;
+            Node prev = head.previous;
+            head = node;
+            node.next = oldHead;
+            node.previous = prev;
+            oldHead.previous = node;
+
+            if (prev != null) {
+                prev.next = node;
+            }
+            return node;
+        }
+
         Node current = head;
-        while (current.event.compareTo(event) != -1) {
+        while (current.event.compareTo(event) > -1) {
             if (current.next == null)
                 break;
             current = current.next;

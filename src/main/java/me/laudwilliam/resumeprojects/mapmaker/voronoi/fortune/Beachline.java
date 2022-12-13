@@ -6,13 +6,13 @@ import me.laudwilliam.resumeprojects.geometry2d.Point;
 import me.laudwilliam.resumeprojects.geometry2d.Triangle;
 import me.laudwilliam.resumeprojects.mapmaker.voronoi.fortune.geometry.Site;
 
-@SuppressWarnings("rawtypes")
+@SuppressWarnings({"rawtypes", "DuplicatedCode"})
 public class Beachline {
 
     // Private
     private Tree.Node root;
 
-    private Breakpoint findBreakpointToTheLeftOf(Breakpoint breakpoint, double directix) {
+    public static Breakpoint findBreakpointToTheLeftOf(Tree.Node root, Breakpoint breakpoint, double directix) {
         Tree.Node rightTurn = null;
         Tree.Node current = root;
         while (current.getData() != breakpoint && !Tree.isLeaf(current)) {
@@ -48,7 +48,7 @@ public class Beachline {
         return (Breakpoint) Tree.getParentOfRightMostLeaf(current.getLeft()).getData();
     }
 
-    private Breakpoint findBreakpointToTheRightOf(Breakpoint breakpoint, double directix) {
+    public static Breakpoint findBreakpointToTheRightOf(Tree.Node root, Breakpoint breakpoint, double directix) {
         Tree.Node leftTurn = null;
         Tree.Node current = root;
         while (current.getData() != breakpoint) {
@@ -84,7 +84,7 @@ public class Beachline {
         return (Breakpoint) Tree.getParentOfLeftMostLeaf(current.getRight()).getData();
     }
 
-    private boolean isPointBeforeBreakpoint(Point point, Breakpoint breakpoint, double directix) {
+    public static boolean isPointBeforeBreakpoint(Point point, Breakpoint breakpoint, double directix) {
         double x1 = breakpoint.arc1.site.getX();
         double y1 = breakpoint.arc1.site.getY();
         double x2 = breakpoint.arc2.site.getX();
@@ -100,7 +100,7 @@ public class Beachline {
         return point.getX() < Math.max(intersection[0], intersection[1]) && point.getX() >= Math.min(intersection[0], intersection[1]);
     }
 
-    private Tree.Node findLeafAboveSite(Site site) {
+    private Tree.Node findArcAboveSite(Site site) {
         Tree.Node current = root;
         while (!Tree.isLeaf(current)) {
             // if current is not a leaf, it must be a breakpoint
@@ -111,22 +111,37 @@ public class Beachline {
         return current;
     }
 
-    double[] getCircleEvent(Breakpoint breakpoint, double directix) {
-        Breakpoint left = findBreakpointToTheLeftOf(breakpoint, directix);
-        Breakpoint right = findBreakpointToTheRightOf(breakpoint, directix);
-        if (left == null || right == null) return null;
-        Breakpoint convergingBreakpoint = isConverging(breakpoint, left) ? left : right;
+    private Tree.Node findArcAboveSite(Site site, Tree.Node[] parent) {
+        Tree.Node current = root;
+        while (!Tree.isLeaf(current)) {
+            // if current is not a leaf, it must be a breakpoint
+            Breakpoint breakpoint = (Breakpoint) current.getData();
 
-        Site site1 = breakpoint.arc1.site;
-        Site site2 = breakpoint.arc2.site;
-        Site site3 = convergingBreakpoint.arc1.site == site1 || convergingBreakpoint.arc1.site == site2 ? convergingBreakpoint.arc2.site : convergingBreakpoint.arc1.site;
+            parent[0] = current;
+            if (isPointBeforeBreakpoint(site, breakpoint, site.getY())) current = current.getLeft();
+            else current = current.getRight();
+        }
+        return current;
+    }
 
-        if (!isClockwise(site1, site2, site3)) return null;
 
-        double[] result = Triangle.circumcenter(site1.getX(), site1.getY(), site2.getX(), site2.getY(), site3.getX(), site3.getY());
-        if (result != null && result[1] - result[2] <= directix) return result;
+    double[] getCircleEvent(Breakpoint breakpoint1, Breakpoint breakpoint2, double directix) {
+        if (breakpoint1 == null || breakpoint2 == null)
+            return null;
+        if (!isConverging(breakpoint1, breakpoint2))
+            return null;
+        Site site1 = breakpoint1.arc1.site;
+        Site site2 = breakpoint1.arc2.site;
+        Site site3 = breakpoint2.arc1.site;
+        if (!isClockwise(site1, site2, site3))
+            return null;
+        double[] circumcenter = Triangle.circumcenter(site1.getX(), site1.getY(), site2.getX(), site2.getY(), site3.getX(), site3.getY());
 
-        return null;
+        return circumcenter != null && circumcenter[1] - circumcenter[2] <= directix ? circumcenter : null;
+    }
+
+    public Tree.Node getRoot() {
+        return root;
     }
 
     private boolean isClockwise(Site site1, Site site2, Site site3) {
@@ -140,9 +155,7 @@ public class Beachline {
     }
 
     private boolean isConverging(Breakpoint breakpoint1, Breakpoint breakpoint2) {
-        if (breakpoint2.arc2.site == breakpoint1.arc1.site && breakpoint2.arc1.site == breakpoint1.arc2.site)
-            return false;
-        else return breakpoint2.arc2.site != breakpoint1.arc2.site || breakpoint2.arc1.site != breakpoint1.arc1.site;
+        return !(breakpoint1.arc1.site == breakpoint2.arc2.site && breakpoint1.arc2.site == breakpoint2.arc1.site);
     }
 
     Breakpoint[] insert(Site site) {
@@ -151,7 +164,8 @@ public class Beachline {
             root = new Tree.Node(new Arc(site));
             return null;
         }
-        Tree.Node current = findLeafAboveSite(site);
+        Tree.Node[] parent = new Tree.Node[1];
+        Tree.Node current = findArcAboveSite(site, parent);
         Arc old = (Arc) current.getData();
 
         // If arc is on the same y as site, create only one breakpoint
@@ -258,10 +272,10 @@ public class Beachline {
     public void insertTest(Site site) {
         Breakpoint[] breakpoints = insert(site);
         if (breakpoints == null) return;
-        Breakpoint left1 = findBreakpointToTheLeftOf(breakpoints[0], site.getY());
-        Breakpoint left2 = findBreakpointToTheLeftOf(breakpoints[1], site.getY());
-        Breakpoint right1 = findBreakpointToTheRightOf(breakpoints[0], site.getY());
-        Breakpoint right2 = findBreakpointToTheRightOf(breakpoints[1], site.getY());
+        Breakpoint left1 = findBreakpointToTheLeftOf(root, breakpoints[0], site.getY());
+        Breakpoint left2 = findBreakpointToTheLeftOf(root, breakpoints[1], site.getY());
+        Breakpoint right1 = findBreakpointToTheRightOf(root, breakpoints[0], site.getY());
+        Breakpoint right2 = findBreakpointToTheRightOf(root, breakpoints[1], site.getY());
         System.out.println();
     }
 }

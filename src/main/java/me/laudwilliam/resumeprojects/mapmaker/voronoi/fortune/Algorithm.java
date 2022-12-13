@@ -52,7 +52,7 @@ public class Algorithm {
                 processSiteEvent((SiteEvent) event);
             }
             if (event instanceof CircleEvent && ((CircleEvent) event).isValid()) {
-
+                processCircleEvent((CircleEvent) event);
             }
         }
     }
@@ -80,16 +80,27 @@ public class Algorithm {
         // Insert site into the beachline
         Beachline.Breakpoint[] breakpoints = beachline.insert(site);
         if (breakpoints != null) {
-            double[] circle = beachline.getCircleEvent(breakpoints[0], site.getY());
-            if (circle != null)
-                eventQueue.addEvent(new CircleEvent(new Point(circle[0], circle[1]), circle[2], breakpoints[0]));
-            circle = beachline.getCircleEvent(breakpoints[1], site.getY());
-            if (circle != null)
-                eventQueue.addEvent(new CircleEvent(new Point(circle[0], circle[1]), circle[2], breakpoints[1]));
-            dcel.insert(breakpoints[0]);
-            dcel.insert(breakpoints[1]);
-            dcel.link(breakpoints[0], breakpoints[1]);
-            System.out.println("Test");
+            for (Beachline.Breakpoint breakpoint : breakpoints) {
+                Beachline.Breakpoint left = Beachline.findBreakpointToTheLeftOf(beachline.getRoot(), breakpoint, site.getY());
+                Beachline.Breakpoint right = Beachline.findBreakpointToTheRightOf(beachline.getRoot(), breakpoint, site.getY());
+                // Check for circle event between left and middle or middle and right
+                Beachline.Breakpoint[] bps = {left, breakpoint};
+                double[] circle = beachline.getCircleEvent(left, breakpoint, site.getY());
+                if (circle == null) {
+                    circle = beachline.getCircleEvent(breakpoint, right, site.getY());
+                    bps = new Beachline.Breakpoint[]{breakpoint, right};
+                }
+                //
+                if (circle != null)
+                    eventQueue.addEvent(new CircleEvent(new Point(circle[0], circle[1]), circle[1] - circle[2], bps[0], bps[1]));
+                //
+                dcel.insert(breakpoint);
+            }
         }
+    }
+
+    // TODO implement circle event processing
+    private void processCircleEvent(CircleEvent event) {
+
     }
 }

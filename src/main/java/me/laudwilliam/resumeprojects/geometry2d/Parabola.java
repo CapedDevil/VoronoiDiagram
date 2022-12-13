@@ -36,6 +36,7 @@ public class Parabola {
     }
 
     public static double findY(double x, double y, double directix, double x1) {
+        if (y == directix) return directix;
         double[] abc = getABC(x, y, directix);
         return (abc[0] * Math.pow(x1, 2)) + (abc[1] * x1) + abc[2];
     }
